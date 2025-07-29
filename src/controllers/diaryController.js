@@ -216,6 +216,109 @@ const diaryController = {
         message: 'Internal server error'
       });
     }
+  },
+
+  async searchDiaries(req, res) {
+    try {
+      const userId = req.user.userId;
+      const { 
+        q: searchQuery, 
+        from_date: fromDate, 
+        to_date: toDate,
+        page = 1,
+        clear_filters 
+      } = req.query;
+
+      // If clear_filters is present, redirect to regular getDiaries
+      if (clear_filters === 'true') {
+        return diaryController.getDiaries(req, res);
+      }
+
+      const limit = 10;
+      const offset = (parseInt(page) - 1) * limit;
+
+      // Build the query
+      let query = knex('diary_entries').where({ user_id: userId });
+      let countQuery = knex('diary_entries').where({ user_id: userId });
+
+      // Add content search filter
+      if (searchQuery && searchQuery.trim()) {
+        const searchTerm = `%${searchQuery.trim()}%`;
+        query = query.where(function() {
+          this.where('title', 'ilike', searchTerm)
+              .orWhere('content', 'ilike', searchTerm);
+        });
+        countQuery = countQuery.where(function() {
+          this.where('title', 'ilike', searchTerm)
+              .orWhere('content', 'ilike', searchTerm);
+        });
+      }
+
+      // Add date range filters
+      if (fromDate) {
+        const fromDateTime = new Date(fromDate);
+        fromDateTime.setHours(0, 0, 0, 0);
+        query = query.where('created_at', '>=', fromDateTime);
+        countQuery = countQuery.where('created_at', '>=', fromDateTime);
+      }
+
+      if (toDate) {
+        const toDateTime = new Date(toDate);
+        toDateTime.setHours(23, 59, 59, 999);
+        query = query.where('created_at', '<=', toDateTime);
+        countQuery = countQuery.where('created_at', '<=', toDateTime);
+      }
+
+      // Get total count for pagination
+      const totalCount = await countQuery.count('id as count').first();
+      const total = parseInt(totalCount.count);
+      const totalPages = Math.ceil(total / limit);
+
+      // Get entries with pagination
+      const entries = await query
+        .orderBy('created_at', 'desc')
+        .limit(limit)
+        .offset(offset)
+        .select('id', 'title', 'content', 'created_at', 'updated_at');
+
+      // Add content preview (first 100 characters)
+      const entriesWithPreview = entries.map(entry => ({
+        ...entry,
+        content_preview: entry.content.length > 100 
+          ? entry.content.substring(0, 100) + '...'
+          : entry.content
+      }));
+
+      // Build response with search context
+      const searchContext = {
+        has_search: !!(searchQuery || fromDate || toDate),
+        search_query: searchQuery || null,
+        from_date: fromDate || null,
+        to_date: toDate || null
+      };
+
+      res.json({
+        success: true,
+        data: {
+          entries: entriesWithPreview,
+          search: searchContext,
+          pagination: {
+            current_page: parseInt(page),
+            total_pages: totalPages,
+            total_entries: total,
+            entries_per_page: limit,
+            has_next: parseInt(page) < totalPages,
+            has_prev: parseInt(page) > 1
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Search diaries error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      });
+    }
   }
 };
 

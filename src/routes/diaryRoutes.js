@@ -7,6 +7,9 @@ const { validateDiaryEntry } = require('../middlewares/validationMiddleware');
 // All diary routes require authentication
 router.use(authenticateToken);
 
+// GET /diary/search - Search diary entries
+router.get('/search', diaryController.searchDiaries);
+
 // GET /diary - Get all user's diary entries with pagination
 router.get('/', diaryController.getDiaries);
 
