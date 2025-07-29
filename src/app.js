@@ -7,6 +7,7 @@ const cors = require('cors');
 
 // Import routes
 const authRoutes = require('./routes/authRoutes');
+const diaryRoutes = require('./routes/diaryRoutes');
 
 // Create Express app
 const app = express();
@@ -38,6 +39,7 @@ app.set('view engine', 'ejs');
 
 // Routes
 app.use('/auth', authRoutes);
+app.use('/diary', diaryRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
