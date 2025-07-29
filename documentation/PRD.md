@@ -21,7 +21,7 @@ Diary Book is a monolithic web application that allows users to create, manage, 
 - Simple dashboard with diary list
 - Responsive web interface
 
-### 2. Technical Stack
+### 2. Technical Stack 
 
 #### 2.1 Backend
 - **Framework**: Express.js (Node.js)
